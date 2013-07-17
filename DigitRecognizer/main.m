@@ -3,11 +3,12 @@ clear ; close all; clc
 
 % read the training data
 % first row is column header, first column is label for the training set (actual digit)
-trainData = dlmread('train_short10000.csv', ',', 1, 0); 
+trainData = dlmread('TrainData.csv', ',', 1, 0); 
+%trainData = dlmread('train_short10000.csv', ',', 1, 0); 
 
 %input_layer_size = sqrt(size(trainData)(2)-1);  % input image is 28x28 pixels
 input_layer_size = size(trainData)(2)-1;  % input image is 28x28 pixels
-hidden_layer_size = 25;   % 25 hidden units
+hidden_layer_size = 100;   % 25 hidden units
 num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
 
 X = trainData(:,2:end);
@@ -37,7 +38,9 @@ initial_nn_params = [initial_Theta1(:) ; initial_Theta2(:)];
 % TODO check the effect of number of hidden layers and hidden layer size
 options = optimset('MaxIter', 500);
 lambda = 2;
+accuracy = 0;
 
+for lambda=2:10
 costFunction = @(p) nnCostFunction(p, input_layer_size, hidden_layer_size, num_labels, X, y, lambda);
 tic
 [nn_params, cost] = fmincg(costFunction, initial_nn_params, options);
@@ -49,16 +52,34 @@ Theta1 = reshape(nn_params(1:hidden_layer_size * (input_layer_size + 1)), ...
 
 Theta2 = reshape(nn_params((1 + (hidden_layer_size * (input_layer_size + 1))):end), ...
                  num_labels, (hidden_layer_size + 1));
+
 % prediction on training set
 
 pred = predict(Theta1, Theta2, X);
 fprintf('\nTraining Set Accuracy: %f\n', mean(double(pred == y)) * 100);
 
+%prediction on cross validation data
+
+xValidData = dlmread('CrossValidationData.csv', ',', 1, 0); 
+xValidPrediction = predict(Theta1, Theta2, xValidData(:,2:end));
+xValidPrediction( find(xValidPrediction==10) ) = 0;
+newAccuracy = mean(double(xValidPrediction == xValidData(:,1)) * 100);
+
+fprintf('lambda=%d, Cross Validation Accuracy = %f\n', lambda, newAccuracy);
+if newAccuracy > accuracy
+    accuracy = newAccuracy;
+    optiTheta1 = Theta1;
+    optiTheta2 = Theta2;
+end
+
+end
+
 % prediction on the test data
 testData = dlmread('test.csv', ',', 1, 0); 
 testX = testData(:,1:end);
 tic
-testPrediction = predict(Theta1, Theta2, testX);
+%testPrediction = predict(Theta1, Theta2, testX);
+testPrediction = predict(optiTheta1, optiTheta2, testX);
 testPrediction( find(testPrediction==10) ) = 0;
 toc
 fid = fopen('DigitPredictions.csv', 'w')
