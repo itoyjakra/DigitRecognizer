@@ -39,17 +39,14 @@ a2 = sigmoid(z2);
 a2 = [ones(m, 1), a2];
 z3 = a2*Theta2';
 a3 = sigmoid(z3);
-%temp = zeros(m, num_labels);
-%temp = zeros(1, num_labels);
-J = 0;
+
+temp = zeros(m, num_labels);
 for i=1:m
-    %temp(i, y(i)) = 1;
-    temp = zeros(1, num_labels);
-    temp(y(i)) = 1;
-    %J = J +  ( -log(a3(i,:))*temp(i,:)' - log(1 - a3(i,:))*(1 - temp(i,:)') );
-    J = J +  ( -log(a3(i,:))*temp' - log(1 - a3(i,:))*(1 - temp') );
+    temp(i, y(i)) = 1;
 end
-J = sum(J)/m;
+
+J =  ( -log(a3).*temp - log(1 - a3).*(1 - temp) );
+J = sum(sum(J))/m;
 
 %%%%%%%%%%%%%%%%%%%%%%
 % regularization of cost function J

@@ -4,18 +4,15 @@ clear ; close all; clc
 % read the training data
 % first row is column header, first column is label for the training set (actual digit)
 trainData = dlmread('TrainData.csv', ',', 1, 0); 
-%trainData = dlmread('train_short10000.csv', ',', 1, 0); 
 
-%input_layer_size = sqrt(size(trainData)(2)-1);  % input image is 28x28 pixels
 input_layer_size = size(trainData)(2)-1;  % input image is 28x28 pixels
-hidden_layer_size = 100;   % 25 hidden units
+hidden_layer_size = 600; 
 num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
 
 X = trainData(:,2:end);
 y = trainData(:,1);
 
 % map 0 to 10 in the labels
-%locs = find (y == 0)
 y( find(y==0) ) = 10;
 
 
@@ -40,39 +37,42 @@ options = optimset('MaxIter', 500);
 lambda = 2;
 accuracy = 0;
 
-for lambda=2:10
-costFunction = @(p) nnCostFunction(p, input_layer_size, hidden_layer_size, num_labels, X, y, lambda);
-tic
-[nn_params, cost] = fmincg(costFunction, initial_nn_params, options);
-toc
+%for lambda=2:10
+for lambda=2:2
+    costFunction = @(p) nnCostFunction(p, input_layer_size, hidden_layer_size, num_labels, X, y, lambda);
+    tic
+    [nn_params, cost] = fmincg(costFunction, initial_nn_params, options);
+    toc
 
-% Obtain Theta1 and Theta2 back from nn_params
-Theta1 = reshape(nn_params(1:hidden_layer_size * (input_layer_size + 1)), ...
+    % Obtain Theta1 and Theta2 back from nn_params
+    Theta1 = reshape(nn_params(1:hidden_layer_size * (input_layer_size + 1)), ...
                  hidden_layer_size, (input_layer_size + 1));
 
-Theta2 = reshape(nn_params((1 + (hidden_layer_size * (input_layer_size + 1))):end), ...
+    Theta2 = reshape(nn_params((1 + (hidden_layer_size * (input_layer_size + 1))):end), ...
                  num_labels, (hidden_layer_size + 1));
 
-% prediction on training set
+    % prediction on training set
 
-pred = predict(Theta1, Theta2, X);
-fprintf('\nTraining Set Accuracy: %f\n', mean(double(pred == y)) * 100);
+    pred = predict(Theta1, Theta2, X);
+    fprintf('\nTraining Set Accuracy: %f\n', mean(double(pred == y)) * 100);
 
-%prediction on cross validation data
+    %prediction on cross validation data
 
-xValidData = dlmread('CrossValidationData.csv', ',', 1, 0); 
-xValidPrediction = predict(Theta1, Theta2, xValidData(:,2:end));
-xValidPrediction( find(xValidPrediction==10) ) = 0;
-newAccuracy = mean(double(xValidPrediction == xValidData(:,1)) * 100);
+    xValidData = dlmread('CrossValidationData.csv', ',', 1, 0); 
+    xValidPrediction = predict(Theta1, Theta2, xValidData(:,2:end));
+    xValidPrediction( find(xValidPrediction==10) ) = 0;
+    newAccuracy = mean(double(xValidPrediction == xValidData(:,1)) * 100);
 
-fprintf('lambda=%d, Cross Validation Accuracy = %f\n', lambda, newAccuracy);
-if newAccuracy > accuracy
-    accuracy = newAccuracy;
-    optiTheta1 = Theta1;
-    optiTheta2 = Theta2;
+    fprintf('lambda=%d, Cross Validation Accuracy = %f\n', lambda, newAccuracy);
+    if newAccuracy > accuracy
+	accuracy = newAccuracy;
+	optiTheta1 = Theta1;
+	optiTheta2 = Theta2;
+	bestLambda = lambda
+    end
+
 end
-
-end
+fprintf('\n\n optimum lambda = %d\n best accuracy = %f\n', bestLambda, accuracy);
 
 % prediction on the test data
 testData = dlmread('test.csv', ',', 1, 0); 
@@ -82,7 +82,7 @@ tic
 testPrediction = predict(optiTheta1, optiTheta2, testX);
 testPrediction( find(testPrediction==10) ) = 0;
 toc
-fid = fopen('DigitPredictions.csv', 'w')
+fid = fopen('DigitPredictions_layer600.csv', 'w')
 for i=1:size(testPrediction)
     fprintf(fid, '%d,%d\n', i, testPrediction(i));
 end
