@@ -40,12 +40,12 @@ a2 = [ones(m, 1), a2];
 z3 = a2*Theta2';
 a3 = sigmoid(z3);
 
-temp = zeros(m, num_labels);
+temp_y = zeros(m, num_labels);
 for i=1:m
-    temp(i, y(i)) = 1;
+    temp_y(i, y(i)) = 1;
 end
 
-J =  ( -log(a3).*temp - log(1 - a3).*(1 - temp) );
+J =  ( -log(a3).*temp_y - log(1 - a3).*(1 - temp_y) );
 J = sum(sum(J))/m;
 
 %%%%%%%%%%%%%%%%%%%%%%
@@ -61,11 +61,7 @@ J = J + ( sum(sumsq(temp_theta1)) + sum(sumsq(temp_theta2)) )*lambda/(2*m);
 %%%%%%%%%%%%%%%%%%%%%%
 % back propagation
 
-temp = zeros(m, num_labels);
-for i=1:m
-    temp(i, y(i)) = 1;
-end
-delta3 = a3 - temp;
+delta3 = a3 - temp_y;
 delta2 = (delta3*Theta2).*[ones(m,1), sigmoidGradient(z2)];
 delta2 = delta2(:,2:end);
 Theta2_grad = Theta2_grad + delta3'*a2/m;
