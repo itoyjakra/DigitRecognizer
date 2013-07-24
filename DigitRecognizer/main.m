@@ -6,7 +6,10 @@ clear ; close all; clc
 trainData = dlmread('TrainData.csv', ',', 1, 0); 
 
 input_layer_size = size(trainData)(2)-1;  % input image is 28x28 pixels
-hidden_layer_size = 600; 
+hidden_layer_size = 1000; 
+maxIter = 500;
+lambda_i = 2;
+lambda_f = 10;
 num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
 
 X = trainData(:,2:end);
@@ -31,14 +34,10 @@ initial_nn_params = [initial_Theta1(:) ; initial_Theta2(:)];
 %checkNNGradients(3); % lambda=3
 
 % train the neural network
-% TODO loop over MaxIter and lambda to optimize training
-% TODO check the effect of number of hidden layers and hidden layer size
-options = optimset('MaxIter', 500);
-lambda = 2;
+options = optimset('MaxIter', maxIter);
 accuracy = 0;
 
-%for lambda=2:10
-for lambda=2:2
+for lambda=lambda_i:lambda_f
     costFunction = @(p) nnCostFunction(p, input_layer_size, hidden_layer_size, num_labels, X, y, lambda);
     tic
     [nn_params, cost] = fmincg(costFunction, initial_nn_params, options);
@@ -82,7 +81,7 @@ tic
 testPrediction = predict(optiTheta1, optiTheta2, testX);
 testPrediction( find(testPrediction==10) ) = 0;
 toc
-fid = fopen('DigitPredictions_layer600.csv', 'w')
+fid = fopen('DigitPredictions_layer1000.csv', 'w')
 for i=1:size(testPrediction)
     fprintf(fid, '%d,%d\n', i, testPrediction(i));
 end
