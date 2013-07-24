@@ -4,8 +4,8 @@ clear ; close all; clc
 %TODO implement PCA
 
 % input parameters
-hidden_layer_size = 100; 
-maxIter    = 200;
+hidden_layer_size = 1000; 
+maxIter    = 500;
 lambda_i   = 0.01;
 lambda_f   = 10;
 num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
@@ -80,11 +80,13 @@ for i=1:length(lambdaList)
 	xvX = xValidData(:,2:end);
     end
     xvy = xValidData(:,1);
+    xvy( find(xvy==0) ) = 10;
+    [xvJ, grad] = nnCostFunction(nn_params, input_layer_size, hidden_layer_size, num_labels, xvX, xvy, lambda);
     xValidPrediction = predict(Theta1, Theta2, xvX);
     xValidPrediction( find(xValidPrediction==10) ) = 0;
     newAccuracy = mean(double(xValidPrediction == xvy) * 100);
 
-    fprintf('lambda=%f, Cross Validation Accuracy = %f\n', lambda, newAccuracy);
+    fprintf('lambda=%f, Cross Validation: \tJ = %f\t Accuracy = %f\n', lambda, xvJ, newAccuracy);
     if newAccuracy > accuracy
 	accuracy = newAccuracy;
 	optiTheta1 = Theta1;
