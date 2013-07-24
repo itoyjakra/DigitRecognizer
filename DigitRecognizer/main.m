@@ -1,18 +1,31 @@
 %% Initialization
 clear ; close all; clc
+%TODO select training and xv set after random shuffle of data
+%TODO implement PCA
+
+% input parameters
+hidden_layer_size = 100; 
+maxIter    = 200;
+lambda_i   = 0.01;
+lambda_f   = 10;
+num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
+nCrop      = 4;		  % number of pixels to crop from each side
+lambdaList = [0.25, 0.5, 0.75, 1, 2, 3, 4];
 
 % read the training data
 % first row is column header, first column is label for the training set (actual digit)
-trainData = dlmread('TrainData.csv', ',', 1, 0); 
+%trainData = dlmread('TrainData.csv', ',', 1, 0); 
+trainData = dlmread('train_short1000.csv', ',', 1, 0); 
 
-input_layer_size = size(trainData)(2)-1;  % input image is 28x28 pixels
-hidden_layer_size = 1000; 
-maxIter = 500;
-lambda_i = 2;
-lambda_f = 10;
-num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
+% crop the training data
+if nCrop > 0
+    X = cropData(trainData(:,2:end), nCrop);
+else
+    X = trainData(:,2:end);
+end
 
-X = trainData(:,2:end);
+input_layer_size = size(X)(2);
+%X = trainData(:,2:end);
 y = trainData(:,1);
 
 % map 0 to 10 in the labels
@@ -37,7 +50,10 @@ initial_nn_params = [initial_Theta1(:) ; initial_Theta2(:)];
 options = optimset('MaxIter', maxIter);
 accuracy = 0;
 
-for lambda=lambda_i:lambda_f
+%for lambda=lambda_i:lambda_f
+lambda = lambda_i;
+for i=1:length(lambdaList)
+    lambda = lambdaList(i);
     costFunction = @(p) nnCostFunction(p, input_layer_size, hidden_layer_size, num_labels, X, y, lambda);
     tic
     [nn_params, cost] = fmincg(costFunction, initial_nn_params, options);
@@ -58,11 +74,17 @@ for lambda=lambda_i:lambda_f
     %prediction on cross validation data
 
     xValidData = dlmread('CrossValidationData.csv', ',', 1, 0); 
-    xValidPrediction = predict(Theta1, Theta2, xValidData(:,2:end));
+    if nCrop > 0
+	xvX = cropData(xValidData(:,2:end), nCrop);
+    else
+	xvX = xValidData(:,2:end);
+    end
+    xvy = xValidData(:,1);
+    xValidPrediction = predict(Theta1, Theta2, xvX);
     xValidPrediction( find(xValidPrediction==10) ) = 0;
-    newAccuracy = mean(double(xValidPrediction == xValidData(:,1)) * 100);
+    newAccuracy = mean(double(xValidPrediction == xvy) * 100);
 
-    fprintf('lambda=%d, Cross Validation Accuracy = %f\n', lambda, newAccuracy);
+    fprintf('lambda=%f, Cross Validation Accuracy = %f\n', lambda, newAccuracy);
     if newAccuracy > accuracy
 	accuracy = newAccuracy;
 	optiTheta1 = Theta1;
@@ -75,13 +97,18 @@ fprintf('\n\n optimum lambda = %d\n best accuracy = %f\n', bestLambda, accuracy)
 
 % prediction on the test data
 testData = dlmread('test.csv', ',', 1, 0); 
-testX = testData(:,1:end);
+if nCrop > 0
+    testX = cropData(testData(:,1:end), nCrop);
+else
+    testX = testData(:,1:end);
+end
+%testX = testData(:,1:end);
 tic
-%testPrediction = predict(Theta1, Theta2, testX);
 testPrediction = predict(optiTheta1, optiTheta2, testX);
 testPrediction( find(testPrediction==10) ) = 0;
 toc
-fid = fopen('DigitPredictions_layer1000.csv', 'w')
+fileName = sprintf('DigitPredictions_ncrop%d_layer%d_lambda%4.2f.csv', nCrop, hidden_layer_size, bestLambda);
+fid = fopen(fileName, 'w')
 for i=1:size(testPrediction)
     fprintf(fid, '%d,%d\n', i, testPrediction(i));
 end
