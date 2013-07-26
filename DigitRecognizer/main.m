@@ -2,20 +2,23 @@
 clear ; close all; clc
 %TODO select training and xv set after random shuffle of data
 %TODO implement PCA
+%TODO implement k hidden layers
 
 % input parameters
-hidden_layer_size = 1000; 
+hidden_layer_size = 500; 
 maxIter    = 500;
 lambda_i   = 0.01;
 lambda_f   = 10;
 num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
-nCrop      = 4;		  % number of pixels to crop from each side
+nCrop      = 0;		  % number of pixels to crop from each side
 lambdaList = [0.25, 0.5, 0.75, 1, 2, 3, 4];
+lambdaList = [0.75, 1, 1.5, 2, 3];
+K = 500;
 
 % read the training data
 % first row is column header, first column is label for the training set (actual digit)
-%trainData = dlmread('TrainData.csv', ',', 1, 0); 
-trainData = dlmread('train_short1000.csv', ',', 1, 0); 
+trainData = dlmread('TrainData.csv', ',', 1, 0); 
+%trainData = dlmread('train_short10000.csv', ',', 1, 0); 
 
 % crop the training data
 if nCrop > 0
@@ -23,6 +26,15 @@ if nCrop > 0
 else
     X = trainData(:,2:end);
 end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%[X, U, S] = runPCA(X, K);
+[X_norm, mu, sigma] = featureNormalize(X);
+[U, S] = pca(X_norm);
+X = projectData(X_norm, U, K);
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 input_layer_size = size(X)(2);
 %X = trainData(:,2:end);
@@ -81,6 +93,9 @@ for i=1:length(lambdaList)
     end
     xvy = xValidData(:,1);
     xvy( find(xvy==0) ) = 10;
+    %[xvX, U, S] = runPCA(xvX, K);
+    [X_norm, mu, sigma] = featureNormalize(xvX);
+    xvX = projectData(X_norm, U, K);
     [xvJ, grad] = nnCostFunction(nn_params, input_layer_size, hidden_layer_size, num_labels, xvX, xvy, lambda);
     xValidPrediction = predict(Theta1, Theta2, xvX);
     xValidPrediction( find(xValidPrediction==10) ) = 0;
@@ -105,6 +120,8 @@ else
     testX = testData(:,1:end);
 end
 %testX = testData(:,1:end);
+[X_norm, mu, sigma] = featureNormalize(testX);
+testX = projectData(X_norm, U, K);
 tic
 testPrediction = predict(optiTheta1, optiTheta2, testX);
 testPrediction( find(testPrediction==10) ) = 0;
