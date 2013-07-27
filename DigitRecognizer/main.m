@@ -5,7 +5,7 @@ clear ; close all; clc
 %TODO implement k hidden layers
 
 % input parameters
-hidden_layer_size = 500; 
+hidden_layer_size = 100; 
 maxIter    = 500;
 lambda_i   = 0.01;
 lambda_f   = 10;
@@ -29,7 +29,6 @@ end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%[X, U, S] = runPCA(X, K);
 [X_norm, mu, sigma] = featureNormalize(X);
 [U, S] = pca(X_norm);
 X = projectData(X_norm, U, K);
@@ -93,8 +92,13 @@ for i=1:length(lambdaList)
     end
     xvy = xValidData(:,1);
     xvy( find(xvy==0) ) = 10;
-    %[xvX, U, S] = runPCA(xvX, K);
-    [X_norm, mu, sigma] = featureNormalize(xvX);
+    %[X_norm, mu, sigma] = featureNormalize(xvX);
+
+X_norm = bsxfun(@minus, xvX, mu);
+temp_sigma = sigma;
+temp_sigma( find(temp_sigma == 0) ) = 1;
+X_norm = bsxfun(@rdivide, X_norm, temp_sigma);
+
     xvX = projectData(X_norm, U, K);
     [xvJ, grad] = nnCostFunction(nn_params, input_layer_size, hidden_layer_size, num_labels, xvX, xvy, lambda);
     xValidPrediction = predict(Theta1, Theta2, xvX);
