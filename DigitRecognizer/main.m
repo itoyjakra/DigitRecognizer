@@ -1,53 +1,71 @@
 %% Initialization
 clear ; close all; clc
 %TODO select training and xv set after random shuffle of data
-%TODO implement PCA
 %TODO implement k hidden layers
 
 % input parameters
-hidden_layer_size = 100; 
-maxIter    = 500;
+hidden_layer_size = 500; 
+maxIter    = 1000;
 lambda_i   = 0.01;
 lambda_f   = 10;
 num_labels = 10;          % 10 labels, from 1 to 10  ("0" is mapped to label 10)
 nCrop      = 0;		  % number of pixels to crop from each side
 lambdaList = [0.25, 0.5, 0.75, 1, 2, 3, 4];
-lambdaList = [0.75, 1, 1.5, 2, 3];
+lambdaList = [0.75, 1, 1.5, 2, 3, 4, 5];
+lambdaList = [2];
 K = 500;
 
 % read the training data
 % first row is column header, first column is label for the training set (actual digit)
 trainData = dlmread('TrainData.csv', ',', 1, 0); 
-%trainData = dlmread('train_short10000.csv', ',', 1, 0); 
+%trainData = dlmread('train_short1000.csv', ',', 1, 0); 
+xValidData = dlmread('CrossValidationData.csv', ',', 1, 0); 
+testData = dlmread('test.csv', ',', 1, 0); 
 
 % crop the training data
 if nCrop > 0
     X = cropData(trainData(:,2:end), nCrop);
+    xvX = cropData(xValidData(:,2:end), nCrop);
+    testX = cropData(testData(:,1:end), nCrop);
 else
     X = trainData(:,2:end);
+    xvX = xValidData(:,2:end);
+    testX = testData(:,1:end);
 end
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%     PCA    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-[X_norm, mu, sigma] = featureNormalize(X);
-[U, S] = pca(X_norm);
-X = projectData(X_norm, U, K);
+
+% Training Data
+muTrain = mean(X);
+X_norm = bsxfun(@minus, X, muTrain);
+sigmaTrain = std(X_norm);
+sigmaTrain( find(sigmaTrain < 1.0e-20) ) = 1; % avoid division by zero
+X_norm = bsxfun(@rdivide, X_norm, sigmaTrain);
+[eigenvectorTrain, S] = pca(X_norm);
+X = projectData(X_norm, eigenvectorTrain, K);
+
+% Cross Validation Data
+X_norm = bsxfun(@minus, xvX, muTrain);
+X_norm = bsxfun(@rdivide, X_norm, sigmaTrain);
+xvX = projectData(X_norm, eigenvectorTrain, K);
+
+% Test Data
+X_norm = bsxfun(@minus, testX, muTrain);
+X_norm = bsxfun(@rdivide, X_norm, sigmaTrain);
+testX = projectData(X_norm, eigenvectorTrain, K);
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 input_layer_size = size(X)(2);
-%X = trainData(:,2:end);
 y = trainData(:,1);
-
-% map 0 to 10 in the labels
-y( find(y==0) ) = 10;
+y( find(y==0) ) = 10; % map the label 0 to label 10
 
 
 % initialize neural network parameters
 initial_Theta1 = randInitializeWeights(input_layer_size, hidden_layer_size);
 initial_Theta2 = randInitializeWeights(hidden_layer_size, num_labels);
-size(initial_Theta1)
-size(initial_Theta2)
 
 % Unroll parameters
 initial_nn_params = [initial_Theta1(:) ; initial_Theta2(:)];
@@ -78,31 +96,17 @@ for i=1:length(lambdaList)
                  num_labels, (hidden_layer_size + 1));
 
     % prediction on training set
-
     pred = predict(Theta1, Theta2, X);
     fprintf('\nTraining Set Accuracy: %f\n', mean(double(pred == y)) * 100);
 
     %prediction on cross validation data
-
-    xValidData = dlmread('CrossValidationData.csv', ',', 1, 0); 
-    if nCrop > 0
-	xvX = cropData(xValidData(:,2:end), nCrop);
-    else
-	xvX = xValidData(:,2:end);
-    end
     xvy = xValidData(:,1);
     xvy( find(xvy==0) ) = 10;
-    %[X_norm, mu, sigma] = featureNormalize(xvX);
 
-X_norm = bsxfun(@minus, xvX, mu);
-temp_sigma = sigma;
-temp_sigma( find(temp_sigma == 0) ) = 1;
-X_norm = bsxfun(@rdivide, X_norm, temp_sigma);
 
-    xvX = projectData(X_norm, U, K);
     [xvJ, grad] = nnCostFunction(nn_params, input_layer_size, hidden_layer_size, num_labels, xvX, xvy, lambda);
     xValidPrediction = predict(Theta1, Theta2, xvX);
-    xValidPrediction( find(xValidPrediction==10) ) = 0;
+    %xValidPrediction( find(xValidPrediction==10) ) = 0;
     newAccuracy = mean(double(xValidPrediction == xvy) * 100);
 
     fprintf('lambda=%f, Cross Validation: \tJ = %f\t Accuracy = %f\n', lambda, xvJ, newAccuracy);
@@ -116,16 +120,6 @@ X_norm = bsxfun(@rdivide, X_norm, temp_sigma);
 end
 fprintf('\n\n optimum lambda = %d\n best accuracy = %f\n', bestLambda, accuracy);
 
-% prediction on the test data
-testData = dlmread('test.csv', ',', 1, 0); 
-if nCrop > 0
-    testX = cropData(testData(:,1:end), nCrop);
-else
-    testX = testData(:,1:end);
-end
-%testX = testData(:,1:end);
-[X_norm, mu, sigma] = featureNormalize(testX);
-testX = projectData(X_norm, U, K);
 tic
 testPrediction = predict(optiTheta1, optiTheta2, testX);
 testPrediction( find(testPrediction==10) ) = 0;

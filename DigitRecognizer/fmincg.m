@@ -46,6 +46,9 @@ function [X, fX, i] = fmincg(f, X, options, P1, P2, P3, P4, P5)
 % 1) Function name and argument specifications
 % 2) Output display
 %
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
+fileName = 'iterCost.txt';
+%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % Read options
 if exist('options', 'var') && ~isempty(options) && isfield(options, 'MaxIter')
@@ -147,6 +150,11 @@ while i < abs(length)                                      % while not finished
   if success                                         % if line search succeeded
     f1 = f2; fX = [fX' f1]';
     fprintf('%s %4i | Cost: %4.6e\r', S, i, f1);
+    if mod(i,10) == 0
+        fid = fopen(fileName, 'a');
+        fprintf(fid, '%4i\t%4.6e\n', i, f1);
+        fclose(fid);
+    end
     s = (df2'*df2-df1'*df2)/(df1'*df1)*s - df2;      % Polack-Ribiere direction
     tmp = df1; df1 = df2; df2 = tmp;                         % swap derivatives
     d2 = df1'*s;
